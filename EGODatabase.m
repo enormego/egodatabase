@@ -221,6 +221,8 @@
 		[row release];
 	}
 	
+	sqlite3_finalize(statement);
+
 	EGODBLockLog(@"%@ released lock", [sql md5]);
 	[executeLock unlock];
 

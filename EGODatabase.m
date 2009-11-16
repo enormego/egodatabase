@@ -3,11 +3,25 @@
 //  EGODatabase
 //
 //  Created by Shaun Harrison on 3/6/09.
-//  Copyright 2009 enormego. All rights reserved.
+//  Copyright (c) 2009 enormego
 //
-// This work is licensed under the Creative Commons GNU General Public License License.
-// To view a copy of this license, visit http://creativecommons.org/licenses/GPL/2.0/
-// or send a letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, California, 94105, USA.
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
 //
 
 /* 
@@ -19,6 +33,20 @@
  *
  * @see http://code.google.com/p/flycode/soureturnCodee/browse/#svn/trunk/fmdb
  */
+
+#define VAToArray(firstarg) ({\
+NSMutableArray* valistArray = [NSMutableArray array];\
+id obj = nil;\
+va_list arguments;\
+va_start(arguments, sql);\
+while ((obj = va_arg(arguments, id))) {\
+	[valistArray addObject:obj];\
+}\
+va_end(arguments);\
+valistArray;\
+})
+
+
 
 #import "EGODatabase.h"
 
@@ -38,7 +66,7 @@
 #endif
 
 @interface EGODatabase (Private)
-- (BOOL)bindStatement:(sqlite3_stmt*)statement toArguments:(va_list)args;
+- (BOOL)bindStatement:(sqlite3_stmt*)statement toParameters:(NSArray*)parameters;
 - (void)bindObject:(id)obj toColumn:(int)idx inStatement:(sqlite3_stmt*)pStmt;
 @end
 
@@ -55,6 +83,40 @@
 	}
 	
 	return self;
+}
+
+- (EGODatabaseRequest*)requestWithQueryAndParameters:(NSString*)sql, ... {
+	return [self requestWithQuery:sql parameters:VAToArray(sql)];
+}
+
+- (EGODatabaseRequest*)requestWithQuery:(NSString*)sql {
+	return [self requestWithQuery:sql parameters:nil];
+}
+
+- (EGODatabaseRequest*)requestWithQuery:(NSString*)sql parameters:(NSArray*)parameters {
+	EGODatabaseRequest* request = [[[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters] autorelease];
+
+	request.database = self;
+	request.requestKind = EGODatabaseSelectRequest;
+	
+	return request;
+}
+
+- (EGODatabaseRequest*)requestWithUpdateAndParameters:(NSString*)sql, ... {
+	return [self requestWithUpdate:sql parameters:VAToArray(sql)];
+}
+
+- (EGODatabaseRequest*)requestWithUpdate:(NSString*)sql {
+	return [self requestWithUpdate:sql parameters:nil];
+}
+
+- (EGODatabaseRequest*)requestWithUpdate:(NSString*)sql parameters:(NSArray*)parameters {
+	EGODatabaseRequest* request = [[[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters] autorelease];
+
+	request.database = self;
+	request.requestKind = EGODatabaseUpdateRequest;
+	
+	return request;
 }
 
 - (BOOL)open {
@@ -77,7 +139,15 @@
 	opened = NO;
 }
 
-- (BOOL)executeUpdate:(NSString*)sql,... {
+- (BOOL)executeUpdateWithParameters:(NSString*)sql,... {
+	return [self executeUpdate:sql parameters:VAToArray(sql)];
+}
+
+- (BOOL)executeUpdate:(NSString*)sql {
+	return [self executeUpdate:sql parameters:nil];
+}
+
+- (BOOL)executeUpdate:(NSString*)sql parameters:(NSArray*)parameters {
 	EGODBLockLog(@"[Update] Waiting for Lock (%@): %@ %@", [sql md5], sql, [NSThread isMainThread] ? @"** Alert: Attempting to lock on main thread **" : @"");
 	[executeLock lock];
 	EGODBLockLog(@"[Update] Got Lock (%@)", [sql md5]);
@@ -107,18 +177,12 @@
 	}
 	
 	
-	va_list args;
-	va_start(args, sql);
-
-	if (![self bindStatement:statement toArguments:args]) {
-		va_end(args);
+	if (![self bindStatement:statement toParameters:parameters]) {
 		EGODBDebugLog(@"[EGODatabase] Invalid bind cound for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
 		[executeLock unlock];
 		return NO;
-	} else {
-		va_end(args);
 	}
 	
 	returnCode = sqlite3_step(statement);
@@ -143,7 +207,15 @@
 	return (returnCode == SQLITE_OK);
 }
 
-- (EGODatabaseResult*)executeQuery:(NSString*)sql,... {
+- (EGODatabaseResult*)executeQueryWithParameters:(NSString*)sql,... {
+	return [self executeQuery:sql parameters:VAToArray(sql)];
+}
+
+- (EGODatabaseResult*)executeQuery:(NSString*)sql {
+	return [self executeQuery:sql parameters:nil];
+}
+
+- (EGODatabaseResult*)executeQuery:(NSString*)sql parameters:(NSArray*)parameters {
 	EGODBLockLog(@"[Query] Waiting for Lock (%@): %@", [sql md5], sql);
 	[executeLock lock];
 	EGODBLockLog(@"[Query] Got Lock (%@)", [sql md5]);
@@ -176,18 +248,12 @@
 		return result;
 	}
 	
-	va_list args;
-	va_start(args, sql);
-	
-	if (![self bindStatement:statement toArguments:args]) {
-		va_end(args);
+	if (![self bindStatement:statement toParameters:parameters]) {
 		EGODBDebugLog(@"[EGODatabase] Invalid bind cound for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
 		[executeLock unlock];
 		return result;
-	} else {
-		va_end(args);
 	}
 	
 	int columnCount = sqlite3_column_count(statement);
@@ -245,12 +311,11 @@
 	return sqlite3_errcode(handle);
 }
 
-- (BOOL)bindStatement:(sqlite3_stmt*)statement toArguments:(va_list)args {
+- (BOOL)bindStatement:(sqlite3_stmt*)statement toParameters:(NSArray*)parameters {
 	int index = 0;
 	int queryCount = sqlite3_bind_parameter_count(statement);
 	
-	while (index < queryCount) {
-		id obj = va_arg(args, id);
+	for(id obj in parameters) {
 		index++;
 		[self bindObject:obj toColumn:index inStatement:statement];
 	}

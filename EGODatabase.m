@@ -71,6 +71,7 @@ valistArray;\
 @end
 
 @implementation EGODatabase
+@synthesize sqliteHandle=handle;
 
 + (id)databaseWithPath:(NSString*)aPath {
 	return [[[[self class] alloc] initWithPath:aPath] autorelease];

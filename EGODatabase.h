@@ -79,4 +79,5 @@
 - (BOOL)hadError;
 - (int)lastErrorCode;
 
+@property(nonatomic,readonly) sqlite3* sqliteHandle;
 @end

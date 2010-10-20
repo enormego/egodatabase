@@ -137,6 +137,7 @@ valistArray;\
 - (void)close {
 	if(!handle) return;
 	sqlite3_close(handle);
+	handle = 0;
 	opened = NO;
 }
 

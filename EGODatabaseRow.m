@@ -93,6 +93,16 @@
     return [columnData objectAtIndex:columnIndex];
 }
 
+- (NSData*)dataForColumn:(NSString*)columnName {
+	int columnIndex = [self columnIndexForName:columnName];
+	if (columnIndex < 0 || columnIndex == NSNotFound) return nil;
+	return [columnData objectAtIndex:columnIndex];
+}
+
+- (NSData*)dataForColumnIndex:(int)columnIndex {
+	return [columnData objectAtIndex:columnIndex];
+}
+
 - (NSDate*)dateForColumn:(NSString*)columnName {
     int columnIndex = [self columnIndexForName:columnName];
     if(columnIndex == -1) return nil;

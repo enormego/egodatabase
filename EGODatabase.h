@@ -53,6 +53,8 @@
 - (BOOL)executeUpdate:(NSString*)sql;
 - (BOOL)executeUpdate:(NSString*)sql parameters:(NSArray*)parameters;
 
+- (sqlite3_int64)last_insert_rowid;
+
 // Execute Query
 - (EGODatabaseResult*)executeQueryWithParameters:(NSString*)sql, ... NS_REQUIRES_NIL_TERMINATION;
 

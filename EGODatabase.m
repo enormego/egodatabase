@@ -209,6 +209,16 @@ valistArray;\
 	return (returnCode == SQLITE_OK);
 }
 
+- (sqlite3_int64)last_insert_rowid
+{
+	if (handle) {
+		return sqlite3_last_insert_rowid(handle);
+	} else {
+		EGODBDebugLog(@"[EGODatabase] Can't get last rowid of nil sqlite");
+		return 0;
+	}
+}
+
 - (EGODatabaseResult*)executeQueryWithParameters:(NSString*)sql,... {
 	return [self executeQuery:sql parameters:VAToArray(sql)];
 }

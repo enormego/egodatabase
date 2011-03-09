@@ -193,11 +193,11 @@ valistArray;\
 	} else if (SQLITE_DONE == returnCode || SQLITE_ROW == returnCode) {
 		
 	} else if (SQLITE_ERROR == returnCode) {
-		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %s) SQLITE_ERROR\n%@\n\n", returnCode, [self lastErrorMessage], sql);
+		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %@) SQLITE_ERROR\n%@\n\n", returnCode, [self lastErrorMessage], sql);
 	} else if (SQLITE_MISUSE == returnCode) {
-		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %s) SQLITE_MISUSE\n%@\n\n", returnCode, [self lastErrorMessage], sql);
+		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %@) SQLITE_MISUSE\n%@\n\n", returnCode, [self lastErrorMessage], sql);
 	} else {
-		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %s) UNKNOWN_ERROR\n%@\n\n", returnCode, [self lastErrorMessage], sql);
+		EGODBDebugLog(@"[EGODatabase] sqlite3_step Failed: (%d: %@) UNKNOWN_ERROR\n%@\n\n", returnCode, [self lastErrorMessage], sql);
 	}
 
 	returnCode = sqlite3_finalize(statement);

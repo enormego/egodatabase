@@ -179,7 +179,7 @@ valistArray;\
 	
 	
 	if (![self bindStatement:statement toParameters:parameters]) {
-		EGODBDebugLog(@"[EGODatabase] Invalid bind cound for number of arguments.");
+		EGODBDebugLog(@"[EGODatabase] Invalid bind count for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
 		[executeLock unlock];
@@ -250,7 +250,7 @@ valistArray;\
 	}
 	
 	if (![self bindStatement:statement toParameters:parameters]) {
-		EGODBDebugLog(@"[EGODatabase] Invalid bind cound for number of arguments.");
+		EGODBDebugLog(@"[EGODatabase] Invalid bind count for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
 		[executeLock unlock];

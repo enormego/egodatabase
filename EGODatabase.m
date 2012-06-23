@@ -72,6 +72,7 @@ valistArray;\
 
 @implementation EGODatabase
 @synthesize sqliteHandle=handle;
+@synthesize encoding=stringEncoding;
 
 + (id)databaseWithPath:(NSString*)aPath {
 	return [[[[self class] alloc] initWithPath:aPath] autorelease];
@@ -81,6 +82,7 @@ valistArray;\
 	if((self = [super init])) {
 		databasePath = [aPath retain];
 		executeLock = [[NSLock alloc] init];
+        stringEncoding = NSUTF8StringEncoding;
 	}
 	
 	return self;
@@ -278,7 +280,9 @@ valistArray;\
 		EGODatabaseRow* row = [[EGODatabaseRow alloc] initWithDatabaseResult:result];
 		for(x=0;x<columnCount;x++) {
 			if(sqlite3_column_text(statement,x) != NULL) {
-				[row.columnData addObject:[[[NSString alloc] initWithUTF8String:(char *)sqlite3_column_text(statement,x)] autorelease]];
+                char* text = (char *)sqlite3_column_text(statement,x);
+                NSString* textString = [NSString stringWithCString:text encoding:stringEncoding];
+				[row.columnData addObject:textString];
 			} else {
 				[row.columnData addObject:@""];
 			}

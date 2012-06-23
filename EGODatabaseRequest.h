@@ -58,6 +58,7 @@ typedef enum {
 @end
 
 @protocol EGODatabaseRequestDelegate<NSObject>
+- (void)requestDidStartLoad:(EGODatabaseRequest*)request;
 - (void)requestDidSucceed:(EGODatabaseRequest*)request withResult:(EGODatabaseResult*)result; // result will be nil for EGODatabaseUpdateRequest
 - (void)requestDidFail:(EGODatabaseRequest*)request withError:(NSError*)error;
 @end

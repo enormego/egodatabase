@@ -119,6 +119,7 @@
 }
 
 - (void)dealloc {
+    [query release];
 	[parameters release];
 	[database release];
 	[super dealloc];

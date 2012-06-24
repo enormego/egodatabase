@@ -28,6 +28,7 @@
 #import "EGODatabase.h"
 
 @interface EGODatabaseRequest (Private)
+- (void)didStartLoad;
 - (void)didSucceedWithResult:(EGODatabaseResult*)result;
 - (void)didFailWithError:(NSError*)error;
 @end
@@ -54,6 +55,8 @@
 	NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 	[delegate retain];
 	
+    [self didStartLoad];
+    
 	if(self.requestKind == EGODatabaseUpdateRequest) {
 		BOOL result = [self.database executeUpdate:query parameters:parameters];
 		
@@ -97,6 +100,12 @@
 	[pool release];
 }
 
+-(void)didStartLoad{
+    if(delegate && [delegate respondsToSelector:@selector(requestDidStartLoad:)]) {
+		[delegate requestDidStartLoad:self];
+	}
+}
+
 - (void)didSucceedWithResult:(EGODatabaseResult*)result {
 	if(delegate && [delegate respondsToSelector:@selector(requestDidSucceed:withResult:)]) {
 		[delegate requestDidSucceed:self withResult:result];
@@ -110,6 +119,7 @@
 }
 
 - (void)dealloc {
+    [query release];
 	[parameters release];
 	[database release];
 	[super dealloc];

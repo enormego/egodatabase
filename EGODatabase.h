@@ -39,7 +39,10 @@
 @private
 	sqlite3* handle;
 	BOOL opened;
+    NSStringEncoding stringEncoding;
 }
+
+@property (nonatomic,assign) NSStringEncoding encoding;
 
 + (id)databaseWithPath:(NSString*)aPath;
 - (id)initWithPath:(NSString*)aPath;

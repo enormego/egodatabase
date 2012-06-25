@@ -50,6 +50,9 @@
 - (NSString*)stringForColumn:(NSString*)columnName;
 - (NSString*)stringForColumnIndex:(int)columnIdx;
 
+- (NSData*)dataForColumn:(NSString*)columnName;
+- (NSData*)dataForColumnIndex:(int)columnIndex;
+
 - (NSDate*)dateForColumn:(NSString*)columnName;
 - (NSDate*)dateForColumnIndex:(int)columnIdx;
 

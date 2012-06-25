@@ -18,7 +18,7 @@ Check out each header file for a complete listing of each method.
 
 # Example
 	EGODatabase* database = [EGODatabase databaseWithPath:[NSHomeDirectory() stringByAppendingPathComponent:@"Documents/database.db"]];
-	EGODatabaseResult* result = [database executeQuery:@"SELECT * FROM `posts` WHERE `post_user_id` = ?", [NSNumber numberWithInt:10]];
+	EGODatabaseResult* result = [database executeQueryWithParameters:@"SELECT * FROM `posts` WHERE `post_user_id` = ?", [NSNumber numberWithInt:10]];
 	for(EGODatabaseRow* row in result) {
 		NSLog(@"Subject: %@", [row stringForColumn:@"post_subject"]);
 		NSLog(@"Date: %@", [row dateForColumn:@"post_date"]);

@@ -2,8 +2,7 @@
 //  EGODatabaseRow.h
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 3/6/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -27,34 +26,29 @@
 #import <Foundation/Foundation.h>
 
 @class EGODatabaseResult;
-@interface EGODatabaseRow : NSObject {
-@private
-	NSMutableArray* columnData;
-	EGODatabaseResult* result;
-}
 
-- (id)initWithDatabaseResult:(EGODatabaseResult*)aResult;
+@interface EGODatabaseRow : NSObject
 
-- (int)intForColumn:(NSString*)columnName;
-- (int)intForColumnIndex:(int)columnIdx;
+- (int)intForColumn:(NSString*)name;
+- (int)intForColumnAtIndex:(NSUInteger)index;
 
-- (long)longForColumn:(NSString*)columnName;
-- (long)longForColumnIndex:(int)columnIdx;
+- (long)longForColumn:(NSString*)name;
+- (long)longForColumnAtIndex:(NSUInteger)index;
 
-- (BOOL)boolForColumn:(NSString*)columnName;
-- (BOOL)boolForColumnIndex:(int)columnIdx;
+- (BOOL)boolForColumn:(NSString*)name;
+- (BOOL)boolForColumnAtIndex:(NSUInteger)index;
 
-- (double)doubleForColumn:(NSString*)columnName;
-- (double)doubleForColumnIndex:(int)columnIdx;
+- (double)doubleForColumn:(NSString*)name;
+- (double)doubleForColumnAtIndex:(NSUInteger)index;
 
-- (NSString*)stringForColumn:(NSString*)columnName;
-- (NSString*)stringForColumnIndex:(int)columnIdx;
+- (NSString*)stringForColumn:(NSString*)name;
+- (NSString*)stringForColumnAtIndex:(NSUInteger)index;
 
-- (NSData*)dataForColumn:(NSString*)columnName;
-- (NSData*)dataForColumnIndex:(int)columnIndex;
+- (NSData*)dataForColumn:(NSString*)name;
+- (NSData*)dataForColumnAtIndex:(NSUInteger)index;
 
-- (NSDate*)dateForColumn:(NSString*)columnName;
-- (NSDate*)dateForColumnIndex:(int)columnIdx;
+- (NSDate*)dateForColumn:(NSString*)name;
+- (NSDate*)dateForColumnAtIndex:(NSUInteger)index;
 
-@property(readonly) NSMutableArray* columnData;
+@property(nonatomic,strong,readonly) NSArray* data;
 @end

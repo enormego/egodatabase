@@ -2,8 +2,7 @@
 //  EGODatabase.m
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 3/6/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -34,53 +33,51 @@
  * @see http://code.google.com/p/flycode/soureturnCodee/browse/#svn/trunk/fmdb
  */
 
-#define VAToArray(firstarg) ({\
-NSMutableArray* valistArray = [NSMutableArray array];\
-id obj = nil;\
-va_list arguments;\
-va_start(arguments, sql);\
-while ((obj = va_arg(arguments, id))) {\
-	[valistArray addObject:obj];\
-}\
-va_end(arguments);\
-valistArray;\
-})
-
-
-
 #import "EGODatabase.h"
+#import "EGODatabaseResult_Internal.h"
+#import "EGODatabaseRow_Internal.h"
 
 #define EGODatabaseDebugLog 1
 #define EGODatabaseLockLog 0
 
 #if EGODatabaseDebugLog
-#define EGODBDebugLog(s,...) NSLog(s, ##__VA_ARGS__)
+	#define EGODBDebugLog(s,...) NSLog(s, ##__VA_ARGS__)
 #else
-#define EGODBDebugLog(s,...)
+	#define EGODBDebugLog(s,...)
 #endif
 
 #if EGODatabaseLockLog
-#define EGODBLockLog(s,...) NSLog(s, ##__VA_ARGS__)
+	#define EGODBLockLog(s,...) NSLog(s, ##__VA_ARGS__)
 #else
-#define EGODBLockLog(s,...)
+	#define EGODBLockLog(s,...)
 #endif
 
-@interface EGODatabase (Private)
-- (BOOL)bindStatement:(sqlite3_stmt*)statement toParameters:(NSArray*)parameters;
-- (void)bindObject:(id)obj toColumn:(int)idx inStatement:(sqlite3_stmt*)pStmt;
-@end
+#define VAToArray(firstarg) ({\
+	NSMutableArray* valistArray = [[NSMutableArray alloc] init]; \
+	id obj = nil;\
+	va_list arguments;\
+	va_start(arguments, sql);\
+	while ((obj = va_arg(arguments, id))) {\
+		[valistArray addObject:obj];\
+	}\
+	va_end(arguments);\
+	valistArray;\
+})
 
-@implementation EGODatabase
-@synthesize sqliteHandle=handle;
-
-+ (id)databaseWithPath:(NSString*)aPath {
-	return [[[[self class] alloc] initWithPath:aPath] autorelease];
+@implementation EGODatabase {
+	dispatch_semaphore_t _executeLock;
+	NSString* _databasePath;
+	BOOL _opened;
 }
 
-- (id)initWithPath:(NSString*)aPath {
++ (instancetype)databaseWithPath:(NSString*)aPath {
+	return [[[self class] alloc] initWithPath:aPath];
+}
+
+- (instancetype)initWithPath:(NSString*)aPath {
 	if((self = [super init])) {
-		databasePath = [aPath retain];
-		executeLock = [[NSLock alloc] init];
+		_databasePath = [aPath copy];
+		_executeLock = dispatch_semaphore_create(1);
 	}
 	
 	return self;
@@ -95,7 +92,7 @@ valistArray;\
 }
 
 - (EGODatabaseRequest*)requestWithQuery:(NSString*)sql parameters:(NSArray*)parameters {
-	EGODatabaseRequest* request = [[[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters] autorelease];
+	EGODatabaseRequest* request = [[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters];
 
 	request.database = self;
 	request.requestKind = EGODatabaseSelectRequest;
@@ -112,7 +109,7 @@ valistArray;\
 }
 
 - (EGODatabaseRequest*)requestWithUpdate:(NSString*)sql parameters:(NSArray*)parameters {
-	EGODatabaseRequest* request = [[[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters] autorelease];
+	EGODatabaseRequest* request = [[EGODatabaseRequest alloc] initWithQuery:sql parameters:parameters];
 
 	request.database = self;
 	request.requestKind = EGODatabaseUpdateRequest;
@@ -121,24 +118,43 @@ valistArray;\
 }
 
 - (BOOL)open {
-	if(opened) return YES;
+	if(_opened) {
+		return YES;
+	}
 	
-	int err = sqlite3_open([databasePath fileSystemRepresentation], &handle);
+	int err = sqlite3_open([_databasePath fileSystemRepresentation], &_sqliteHandle);
 
 	if(err != SQLITE_OK) {
 		EGODBDebugLog(@"[EGODatabase] Error opening DB: %d", err);
 		return NO;
 	}
 	
-	opened = YES;
-	return YES;
+	return (_opened = YES);
 }
 
 - (void)close {
-	if(!handle) return;
-	sqlite3_close(handle);
-	handle = 0;
-	opened = NO;
+	if(self.sqliteHandle != 0) {
+		sqlite3_close(self.sqliteHandle);
+		_sqliteHandle = 0;
+		_opened = NO;
+	}
+}
+
+- (void)execute:(void(^)(sqlite3*))block {
+	EGODBLockLog(@"[Update] Waiting for Lock (%@): %@ %@", [sql md5], sql, [NSThread isMainThread] ? @"** Alert: Attempting to lock on main thread **" : @"");
+	dispatch_semaphore_wait(_executeLock, 0);
+	EGODBLockLog(@"[Update] Got Lock (%@)", [sql md5]);
+	
+	if(![self open]) {
+		EGODBLockLog(@"%@ released lock", [sql md5]);
+		dispatch_semaphore_signal(_executeLock);
+		return;
+	}
+	
+	block(_sqliteHandle);
+	
+	EGODBLockLog(@"%@ released lock", [sql md5]);
+	dispatch_semaphore_signal(_executeLock);
 }
 
 - (BOOL)executeUpdateWithParameters:(NSString*)sql,... {
@@ -151,30 +167,30 @@ valistArray;\
 
 - (BOOL)executeUpdate:(NSString*)sql parameters:(NSArray*)parameters {
 	EGODBLockLog(@"[Update] Waiting for Lock (%@): %@ %@", [sql md5], sql, [NSThread isMainThread] ? @"** Alert: Attempting to lock on main thread **" : @"");
-	[executeLock lock];
+	dispatch_semaphore_wait(_executeLock, 0);
 	EGODBLockLog(@"[Update] Got Lock (%@)", [sql md5]);
 	
 	if(![self open]) {
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return NO;
 	}
 
 	int returnCode = 0;
 	sqlite3_stmt* statement = NULL;
 
-	returnCode = sqlite3_prepare(handle, [sql UTF8String], -1, &statement, 0);
+	returnCode = sqlite3_prepare(self.sqliteHandle, [sql UTF8String], -1, &statement, 0);
 	
 	if (SQLITE_BUSY == returnCode) {
-		EGODBLockLog(@"[EGODatabase] Query Failed, Database Busy:\n%@\n\n", sql);
+		EGODBDebugLog(@"[EGODatabase] Query Failed, Database Busy:\n%@\n\n", sql);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return NO;
 	} else if (SQLITE_OK != returnCode) {
 		EGODBDebugLog(@"[EGODatabase] Query Failed, Error: %d \"%@\"\n%@\n\n", [self lastErrorCode], [self lastErrorMessage], sql);
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return NO;
 	}
 	
@@ -183,7 +199,7 @@ valistArray;\
 		EGODBDebugLog(@"[EGODatabase] Invalid bind count for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return NO;
 	}
 	
@@ -204,15 +220,14 @@ valistArray;\
 	returnCode = sqlite3_finalize(statement);
 
 	EGODBLockLog(@"%@ released lock", [sql md5]);
-	[executeLock unlock];
+	dispatch_semaphore_signal(_executeLock);
 	
 	return (returnCode == SQLITE_OK);
 }
 
-- (sqlite3_int64)last_insert_rowid
-{
-	if (handle) {
-		return sqlite3_last_insert_rowid(handle);
+- (sqlite3_int64)lastInsertRowId {
+	if (self.sqliteHandle) {
+		return sqlite3_last_insert_rowid(self.sqliteHandle);
 	} else {
 		EGODBDebugLog(@"[EGODatabase] Can't get last rowid of nil sqlite");
 		return 0;
@@ -229,34 +244,34 @@ valistArray;\
 
 - (EGODatabaseResult*)executeQuery:(NSString*)sql parameters:(NSArray*)parameters {
 	EGODBLockLog(@"[Query] Waiting for Lock (%@): %@", [sql md5], sql);
-	[executeLock lock];
+	dispatch_semaphore_wait(_executeLock, 0);
 	EGODBLockLog(@"[Query] Got Lock (%@)", [sql md5]);
 	
-	EGODatabaseResult* result = [[[EGODatabaseResult alloc] init] autorelease];
+	EGODatabaseResult* result = [[EGODatabaseResult alloc] init];
 
 	if(![self open]) {
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return result;
 	}
 	
 	int returnCode = 0;
 	sqlite3_stmt* statement = NULL;
 	
-	returnCode = sqlite3_prepare(handle, [sql UTF8String], -1, &statement, 0);
+	returnCode = sqlite3_prepare(self.sqliteHandle, [sql UTF8String], -1, &statement, 0);
 	result.errorCode = [self lastErrorCode];
 	result.errorMessage = [self lastErrorMessage];
 	
 	if (SQLITE_BUSY == returnCode) {
 		EGODBDebugLog(@"[EGODatabase] Query Failed, Database Busy:\n%@\n\n", sql);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return result;
 	} else if (SQLITE_OK != returnCode) {
 		EGODBDebugLog(@"[EGODatabase] Query Failed, Error: %d \"%@\"\n%@\n\n", [self lastErrorCode], [self lastErrorMessage], sql);
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return result;
 	}
 	
@@ -264,56 +279,64 @@ valistArray;\
 		EGODBDebugLog(@"[EGODatabase] Invalid bind count for number of arguments.");
 		sqlite3_finalize(statement);
 		EGODBLockLog(@"%@ released lock", [sql md5]);
-		[executeLock unlock];
+		dispatch_semaphore_signal(_executeLock);
 		return result;
 	}
 	
 	int columnCount = sqlite3_column_count(statement);
-	int x;
 	
-	for(x=0;x<columnCount;x++) {
+	NSMutableArray* columnNames = [[NSMutableArray alloc] init];
+	NSMutableArray* columnTypes = [[NSMutableArray alloc] init];
+	
+	for(int x = 0; x < columnCount; x++) {
 		if(sqlite3_column_name(statement,x) != NULL) {
-			[result.columnNames addObject:[NSString stringWithUTF8String:sqlite3_column_name(statement,x)]];
+			[columnNames addObject:[NSString stringWithUTF8String:sqlite3_column_name(statement,x)]];
 		} else {
-			[result.columnNames addObject:[NSString stringWithFormat:@"%d", x]];
+			[columnNames addObject:[NSString stringWithFormat:@"%d", x]];
 		}
 
 		if(sqlite3_column_decltype(statement,x) != NULL) {
-			[result.columnTypes addObject:[NSString stringWithUTF8String:sqlite3_column_decltype(statement,x)]];
+			[columnTypes addObject:[NSString stringWithUTF8String:sqlite3_column_decltype(statement,x)]];
 		} else {
-			[result.columnTypes addObject:@""];
+			[columnTypes addObject:@""];
 		}
 	}
 	
+	result.columnNames = columnNames;
+	result.columnTypes = columnTypes;
+	
+	NSMutableArray* rows = [[NSMutableArray alloc] init];
+	
 	while(sqlite3_step(statement) == SQLITE_ROW) {
-		EGODatabaseRow* row = [[EGODatabaseRow alloc] initWithDatabaseResult:result];
-		for(x=0;x<columnCount;x++) {
+		NSMutableArray* data = [[NSMutableArray alloc] init];
+		
+		for(int x = 0; x < columnCount; x++) {
 			if (SQLITE_BLOB == sqlite3_column_type(statement, x)) {
-				[row.columnData addObject:[NSData
-					dataWithBytes:sqlite3_column_text(statement,x)
-					length:sqlite3_column_bytes(statement,x)]];
+				[data addObject:[NSData dataWithBytes:sqlite3_column_text(statement,x) length:sqlite3_column_bytes(statement,x)]];
 			} else if (sqlite3_column_text(statement,x) != NULL) {
-				[row.columnData addObject:[[[NSString alloc] initWithUTF8String:(char *)sqlite3_column_text(statement,x)] autorelease]];
+				[data addObject:@((char*)sqlite3_column_text(statement,x))];
 			} else {
-				[row.columnData addObject:@""];
+				[data addObject:@""];
 			}
 		}
 		
-		[result addRow:row];
-		[row release];
+		EGODatabaseRow* row = [[EGODatabaseRow alloc] initWithDatabaseResult:result data:data];
+		[rows addObject:row];
 	}
+	
+	result.rows = rows;
 	
 	sqlite3_finalize(statement);
 
 	EGODBLockLog(@"%@ released lock", [sql md5]);
-	[executeLock unlock];
+	dispatch_semaphore_signal(_executeLock);
 
 	return result;
 }
 
 - (NSString*)lastErrorMessage {
 	if([self hadError]) {
-		return [NSString stringWithUTF8String:sqlite3_errmsg(handle)];
+		return [NSString stringWithUTF8String:sqlite3_errmsg(self.sqliteHandle)];
 	} else {
 		return nil;
 	}
@@ -324,7 +347,7 @@ valistArray;\
 }
 
 - (int)lastErrorCode {
-	return sqlite3_errcode(handle);
+	return sqlite3_errcode(self.sqliteHandle);
 }
 
 - (BOOL)bindStatement:(sqlite3_stmt*)statement toParameters:(NSArray*)parameters {
@@ -343,7 +366,7 @@ valistArray;\
 	if ((!obj) || ((NSNull *)obj == [NSNull null])) {
 		sqlite3_bind_null(pStmt, idx);
 	} else if ([obj isKindOfClass:[NSData class]]) {
-		sqlite3_bind_blob(pStmt, idx, [obj bytes], [obj length], SQLITE_STATIC);
+		sqlite3_bind_blob(pStmt, idx, [obj bytes], (int)[obj length], SQLITE_STATIC);
 	} else if ([obj isKindOfClass:[NSDate class]]) {
 		sqlite3_bind_double(pStmt, idx, [obj timeIntervalSince1970]);
 	} else if ([obj isKindOfClass:[NSNumber class]]) {
@@ -367,9 +390,6 @@ valistArray;\
 
 - (void)dealloc {
 	[self close];
-	[executeLock release];
-	[databasePath release];
-	[super dealloc];
 }
 
 @end

@@ -1,9 +1,8 @@
 //
-//  EGODatabaseResult.h
+//  EGODatabaseResult_Internal.h
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 3/6/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,25 +23,13 @@
 //  THE SOFTWARE.
 //
 
-#import <Foundation/Foundation.h>
+#import "EGODatabaseResult.h"
 
-@class EGODatabaseRow;
-@interface EGODatabaseResult : NSObject<NSFastEnumeration> {
-@private
-	int errorCode;
-	NSString* errorMessage;
-	NSMutableArray* columnNames;
-	NSMutableArray* columnTypes;
-	NSMutableArray* rows;
-}
+@interface EGODatabaseResult ()
 
-- (void)addRow:(EGODatabaseRow*)row;
-- (EGODatabaseRow*)rowAtIndex:(NSInteger)index;
-- (NSUInteger)count;
-
-@property(nonatomic,assign) int errorCode;
-@property(nonatomic,copy) NSString* errorMessage;
-@property(readonly) NSMutableArray* columnNames;
-@property(readonly) NSMutableArray* columnTypes;
-@property(readonly) NSMutableArray* rows;
+@property(nonatomic,readwrite) int errorCode;
+@property(nonatomic,copy,readwrite) NSString* errorMessage;
+@property(nonatomic,strong,readwrite) NSArray* columnNames;
+@property(nonatomic,strong,readwrite) NSArray* columnTypes;
+@property(nonatomic,strong,readwrite) NSArray* rows;
 @end

@@ -2,8 +2,7 @@
 //  EGODatabaseRequest.h
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 10/18/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -31,33 +30,23 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum {
+typedef NS_ENUM(NSInteger, EGODatabaseRequestKind) {
 	EGODatabaseUpdateRequest,
 	EGODatabaseSelectRequest
-} EGODatabaseRequestKind;
+};
 
 @class EGODatabase, EGODatabaseResult;
-@protocol EGODatabaseRequestDelegate;
-@interface EGODatabaseRequest : NSOperation {
-@private
-	NSArray* parameters;
-	NSInteger tag;
-	NSString* query;
-	EGODatabase* database;
-	EGODatabaseRequestKind requestKind;
-	id<EGODatabaseRequestDelegate> delegate;
-}
 
-- (id)initWithQuery:(NSString*)aQuery;
-- (id)initWithQuery:(NSString*)aQuery parameters:(NSArray*)someParameters;
+@interface EGODatabaseRequest : NSOperation
 
-@property(nonatomic,assign) NSInteger tag;
-@property(nonatomic,retain) EGODatabase* database;
-@property(nonatomic,assign) EGODatabaseRequestKind requestKind;
-@property(nonatomic,assign) id<EGODatabaseRequestDelegate> delegate;
-@end
+- (id)initWithQuery:(NSString*)query;
+- (id)initWithQuery:(NSString*)query parameters:(NSArray*)parameters;
 
-@protocol EGODatabaseRequestDelegate<NSObject>
-- (void)requestDidSucceed:(EGODatabaseRequest*)request withResult:(EGODatabaseResult*)result; // result will be nil for EGODatabaseUpdateRequest
-- (void)requestDidFail:(EGODatabaseRequest*)request withError:(NSError*)error;
+@property(nonatomic) NSInteger tag;
+@property(nonatomic) EGODatabaseRequestKind requestKind;
+
+@property(nonatomic,strong) EGODatabase* database;
+
+// Called asynchronously on the main queue
+@property(nonatomic,copy) void(^completion)(EGODatabaseRequest* request, EGODatabaseResult* result, NSError* error);
 @end

@@ -2,8 +2,7 @@
 //  EGODatabaseResult.m
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 3/6/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,44 +23,28 @@
 //  THE SOFTWARE.
 //
 
-#import "EGODatabaseResult.h"
-
+#import "EGODatabaseResult_Internal.h"
 
 @implementation EGODatabaseResult
-@synthesize errorCode, errorMessage, columnNames, columnTypes, rows;
-- (id)init {
-	if((self = [super init])) {
-		errorCode = 0;
-		columnNames = [[NSMutableArray alloc] init];
-		columnTypes = [[NSMutableArray alloc] init];
-		rows = [[NSMutableArray alloc] init];
-	}
-	
-	return self;
+
+- (EGODatabaseRow*)rowAtIndex:(NSUInteger)index {
+	return [self.rows objectAtIndex:index];
 }
 
-- (void)addRow:(EGODatabaseRow*)row {
-	[rows addObject:row];
+- (EGODatabaseRow*)firstRow {
+	return [self.rows firstObject];
 }
 
-- (EGODatabaseRow*)rowAtIndex:(NSInteger)index {
-	return [rows objectAtIndex:index];
+- (EGODatabaseRow*)lastRow {
+	return [self.rows lastObject];
 }
 
 - (NSUInteger)count {
-	return rows.count;
+	return [self.rows count];
 }
 
-- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState *)state objects:(id *)stackbuf count:(NSUInteger)len {
-	return [rows countByEnumeratingWithState:state objects:stackbuf count:len];
-}
-
-- (void)dealloc {
-	[rows release];
-	[errorMessage release];
-	[columnNames release];
-	[columnTypes release];
-	[super dealloc];
+- (NSUInteger)countByEnumeratingWithState:(NSFastEnumerationState*)state objects:(id __unsafe_unretained [])buffer count:(NSUInteger)len {
+	return [self.rows countByEnumeratingWithState:state objects:buffer count:len];
 }
 
 @end

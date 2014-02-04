@@ -2,8 +2,7 @@
 //  EGODatabase.h
 //  EGODatabase
 //
-//  Created by Shaun Harrison on 3/6/09.
-//  Copyright (c) 2009 enormego
+//  Copyright (c) 2009-2014 Enormego, Shaun Harrison
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -25,27 +24,21 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <sqlite3.h>
+
 #import "EGODatabaseRequest.h"
 #import "EGODatabaseResult.h"
 #import "EGODatabaseRow.h"
-#import <sqlite3.h>
 
+@interface EGODatabase : NSObject
 
-@interface EGODatabase : NSObject {
-@protected
-	NSString* databasePath;
-	NSLock* executeLock;
-	
-@private
-	sqlite3* handle;
-	BOOL opened;
-}
-
-+ (id)databaseWithPath:(NSString*)aPath;
-- (id)initWithPath:(NSString*)aPath;
++ (instancetype)databaseWithPath:(NSString*)aPath;
+- (instancetype)initWithPath:(NSString*)aPath;
 
 - (BOOL)open;
 - (void)close;
+
+@property(nonatomic,readonly) sqlite3* sqliteHandle;
 
 // Execute Updates
 - (BOOL)executeUpdateWithParameters:(NSString*)sql, ... NS_REQUIRES_NIL_TERMINATION;
@@ -53,7 +46,7 @@
 - (BOOL)executeUpdate:(NSString*)sql;
 - (BOOL)executeUpdate:(NSString*)sql parameters:(NSArray*)parameters;
 
-- (sqlite3_int64)last_insert_rowid;
+- (sqlite3_int64)lastInsertRowId;
 
 // Execute Query
 - (EGODatabaseResult*)executeQueryWithParameters:(NSString*)sql, ... NS_REQUIRES_NIL_TERMINATION;
@@ -62,24 +55,23 @@
 - (EGODatabaseResult*)executeQuery:(NSString*)sql parameters:(NSArray*)parameters;
 
 // Query request operation
-
 - (EGODatabaseRequest*)requestWithQueryAndParameters:(NSString*)sql, ... NS_REQUIRES_NIL_TERMINATION;
 
 - (EGODatabaseRequest*)requestWithQuery:(NSString*)sql;
 - (EGODatabaseRequest*)requestWithQuery:(NSString*)sql parameters:(NSArray*)parameters;
 
 // Update request operation
-
 - (EGODatabaseRequest*)requestWithUpdateAndParameters:(NSString*)sql, ... NS_REQUIRES_NIL_TERMINATION;
 
 - (EGODatabaseRequest*)requestWithUpdate:(NSString*)sql;
 - (EGODatabaseRequest*)requestWithUpdate:(NSString*)sql parameters:(NSArray*)parameters;
 
-// Error methods
+// Execute raw sqlite calls, with thread safe lock protection. Do not nest, as it will cause a deadlock.
+- (void)execute:(void(^)(sqlite3*))block;
 
+// Error methods
 - (NSString*)lastErrorMessage;
 - (BOOL)hadError;
 - (int)lastErrorCode;
 
-@property(nonatomic,readonly) sqlite3* sqliteHandle;
 @end

@@ -26,16 +26,14 @@
 #import "EGODatabaseRow_Internal.h"
 #import "EGODatabaseResult.h"
 
-@interface EGODatabaseRow ()
-
-@property(nonatomic,strong) NSArray* names;
-@end
-
 @implementation EGODatabaseRow
+
+@dynamic dictionary;
+@synthesize names = _names;
 
 - (instancetype)initWithDatabaseResult:(EGODatabaseResult*)result data:(NSArray*)data {
 	if((self = [super init])) {
-		self.names = result.columnNames;
+		_names = result.columnNames;
 		self.data = data;
 	}
 	
@@ -149,5 +147,42 @@
 - (NSDate*)dateForColumnAtIndex:(NSUInteger)index {
     return [NSDate dateWithTimeIntervalSince1970:[self doubleForColumnAtIndex:index]];
 }
+
+- (NSDictionary*)dictionary
+{
+    return [NSDictionary dictionaryWithObjects:self.data forKeys:self.names];
+}
+
+- (id)populateObject:(id)obj
+{
+    [obj setValuesForKeysWithDictionary:self.dictionary];
+    return obj;
+}
+
+-(id)populateObject:(id)obj mappings:(NSDictionary*)d
+{
+    NSMutableArray* newNames = [NSMutableArray arrayWithCapacity:self.names.count];
+    for (NSString* n in self.names)
+    {
+        NSString* newName = d[n];
+        if(!newName) { newName = n; }
+        [newNames addObject:newName];
+    }
+    [obj setValuesForKeysWithDictionary:[NSDictionary dictionaryWithObjects: self.data forKeys: newNames]];
+    return obj;
+}
+
+- (id)objectOfClass:(Class)c
+{
+    id obj = [[c alloc]init];
+    return [self populateObject:obj];
+}
+
+- (id)objectOfClass:(Class)c mappings:(NSDictionary*)d
+{
+    id obj = [[c alloc]init];
+    return [self populateObject:obj mappings:d];
+}
+
 
 @end

@@ -50,5 +50,14 @@
 - (NSDate*)dateForColumn:(NSString*)name;
 - (NSDate*)dateForColumnAtIndex:(NSUInteger)index;
 
+- (id)populateObject:(id)obj;
+- (id)populateObject:(id)obj mappings:(NSDictionary*)d;
+
+- (id)objectOfClass:(Class)c;
+- (id)objectOfClass:(Class)c mappings:(NSDictionary*)d;
+
 @property(nonatomic,strong,readonly) NSArray* data;
+@property(nonatomic,strong,readonly) NSArray* names;
+@property(nonatomic,readonly) NSDictionary* dictionary;
+
 @end

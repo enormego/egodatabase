@@ -35,6 +35,9 @@
 - (long)longForColumn:(NSString*)name;
 - (long)longForColumnAtIndex:(NSUInteger)index;
 
+- (long long)longLongForColumn:(NSString*)name;
+- (long long)longLongForColumnAtIndex:(NSUInteger)index;
+
 - (BOOL)boolForColumn:(NSString*)name;
 - (BOOL)boolForColumnAtIndex:(NSUInteger)index;
 

@@ -61,17 +61,25 @@
 }
 
 - (long)longForColumn:(NSString*)column {
+    return (long)[self longLongForColumn:column];
+}
+
+- (long)longForColumnAtIndex:(NSUInteger)index {
+    return (long)[self longLongForColumnAtIndex:index];
+}
+
+- (long long)longLongForColumn:(NSString*)column {
     NSUInteger index = [self indexForName:column];
 	
 	if(index == NSNotFound) {
 		return 0;
     } else {
-		return [[self.data objectAtIndex:index] longValue];
+		return [[self.data objectAtIndex:index] longLongValue];
 	}
 }
 
-- (long)longForColumnAtIndex:(NSUInteger)index {
-    return [[self.data objectAtIndex:index] longValue];
+- (long long)longLongForColumnAtIndex:(NSUInteger)index {
+    return [[self.data objectAtIndex:index] longLongValue];
 }
 
 - (BOOL)boolForColumn:(NSString*)column {
